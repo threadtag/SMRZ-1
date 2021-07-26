@@ -1,46 +1,62 @@
-
 # Author: Hengyi Jiang <hengyi.jiang@gmail.com>
 # purpose to calculate a subsequence described by regexp from a huge genome sequence
 # written by JHY, 2018-7-12
+# last update 2021-07-26
 # output format like below:
-# >Genome Name_start_end
+# >Genome Name_fw/rv_start_end
 # matched_subseq
 
 # use Digest::MD5 qw(md5 md5_hex md5_base64);
 
- sub sub_regexp_pos{
- 	my $name = shift; # seq name
- 	my $text = shift; # reference to string, which is the sequence
- 	my $tg = shift;   # target sequence
- 	my $e, $s;        # $e start of next search, $s start of the match
+sub sub_regexp_pos{
+	my $name = shift; # seq name
+	my $text = shift; # reference to string, which is the sequence
+	my $tg = shift;   # target sequence
+	my $e, $s;        # $e start of next search, $s start of the match
 	my @r = ();       # return value
 
- 	return @r if $name eq "" or $$text eq "" or $tg eq "" ; # empty array
+	return @r if $name eq "" or $$text eq "" or $tg eq "" ; # empty array
 
 	while($$text =~ m/$tg/ig){
 		$e = pos($$text); # start of next search
 		$s= $e - length($&)+1; 
 		$m =$&;
-		push(@r,[substr($name,1), $s,$e,$m]);
+		push(@r,[substr($name,1), $s,$e,$m,'fw']);
+	}
+	
+	my $rev_c_text = reverse_complement($text);
+	while($$rev_c_text =~ m/$tg/ig){
+		$s = length($$rev_c_text)-pos($$rev_c_text)+1;
+		$e = $s+length($&)-1;
+		$m =$&;
+		push(@r,[substr($name,1), $s,$e,$m,'rv']);
 	}
 	return @r;
 	# @r is  array reference, this array include :
 	#  start_of_target, end_of_target, matched_target
- }
+}
 
- sub format_print{
- 	my $input =shift; 
- 	# input is a reference, because passing array as parameter only do shallow copy
- 	foreach $h(@$input){
- 		if ($h != undef) {
- 			print ">";
+sub format_print{
+	my $input =shift; 
+	# input is a reference, because passing array as parameter only do shallow copy
+	foreach $h(@$input){
+		if ($h != undef) {
+			print ">";
 			print $h->[0]."_";
+			print $h->[4]."_";
 			print $h->[1]."_";
 			print $h->[2]."\n";
 			print $h->[3]."\n";
 		}
 	}
- }
+}
+
+sub reverse_complement{
+	my $input = shift; #ref to seq
+	my $result = reverse($$input);
+	$result =~ tr/ATCGatcg/TAGCtagc/;
+	return \$result; #ref type
+}
 
 my $file_name = shift;
 my $target = shift;
